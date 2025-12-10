@@ -281,9 +281,5 @@ private fun verifyCriticalExtensions(
             )
         )
     }
-
-    if (!currCert.tbsCertificate.keyUsage.contains(X509KeyUsage.CRL_SIGN)) {
-        throw KeyUsageException("CRL signature key usage extension not present at the intermediate cert!")
-    }
 }
 
