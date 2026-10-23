@@ -18,11 +18,15 @@ typealias CoseMac0Typed<P, H> = CoseTyped<CoseMac0, P, H>
 /**
  * Typed payload and effective header over an unchanged [cose] wire object.
  *
+ * Create values through [CoseSigner] / [CoseMacer] and decode views through `typed()`; construction and copying are
+ * internal. COSE_Sign1 and COSE_Mac0 share one structure, so they share this view; the signature of a
+ * [CoseSign1Typed] is derived on access, see [signature].
  * Forward [cose] or serialize through [CoseTypedSerializerTemplate] to preserve the original bytes.
- * Typed decoding does not verify signatures or establish key trust.
+ * Typed decoding does not verify signatures or MACs, nor establish key trust.
  */
 @OptIn(ExperimentalSerializationApi::class)
-data class CoseTyped<out C : COSE, out P, H : CoseHeaderBase>(
+@ConsistentCopyVisibility
+data class CoseTyped<out C : COSE, out P, H : CoseHeaderBase> internal constructor(
     val cose: C,
     val payload: P,
     internal val wrappedHeader: CoseHeaderWrapped<H>,
@@ -61,9 +65,9 @@ data class CoseTyped<out C : COSE, out P, H : CoseHeaderBase>(
         return result
     }
 
-    companion object {
+    /** Builders from raw signature / MAC functions, for tests and internal use. Public: [CoseSigner], [CoseMacer]. */
+    internal companion object {
 
-        /** Creates a [CoseSign1] with the buckets of [header] over [payload], encoded with [payloadSerializer]. */
         suspend fun <P : Any, H : CoseHeaderBase> sign1(
             header: CoseHeaderWrapped<H>,
             payload: P,
@@ -83,7 +87,6 @@ data class CoseTyped<out C : COSE, out P, H : CoseHeaderBase>(
             header,
         )
 
-        /** Creates a [CoseSign1] from two [CoseHeader]s, one per bucket. */
         suspend fun <P : Any> sign1(
             protectedHeader: CoseHeader,
             unprotectedHeader: CoseHeader? = null,
@@ -93,15 +96,10 @@ data class CoseTyped<out C : COSE, out P, H : CoseHeaderBase>(
             externalAad: ByteArray = byteArrayOf(),
             signer: suspend (ByteArray) -> ByteArray,
         ): CoseSign1Typed<P, CoseHeader> = sign1(
-            header = wrapCoseHeaders(protectedHeader, unprotectedHeader),
-            payload = payload,
-            payloadSerializer = payloadSerializer,
-            detached = detached,
-            externalAad = externalAad,
-            signer = signer,
+            wrapCoseHeaders(protectedHeader, unprotectedHeader),
+            payload, payloadSerializer, detached, externalAad, signer,
         )
 
-        /** Creates a [CoseMac0] with the buckets of [header] over [payload], encoded with [payloadSerializer]. */
         suspend fun <P : Any, H : CoseHeaderBase> mac0(
             header: CoseHeaderWrapped<H>,
             payload: P,
@@ -121,7 +119,6 @@ data class CoseTyped<out C : COSE, out P, H : CoseHeaderBase>(
             header,
         )
 
-        /** Creates a [CoseMac0] from two [CoseHeader]s, one per bucket. */
         suspend fun <P : Any> mac0(
             protectedHeader: CoseHeader,
             unprotectedHeader: CoseHeader? = null,
@@ -131,12 +128,8 @@ data class CoseTyped<out C : COSE, out P, H : CoseHeaderBase>(
             externalAad: ByteArray = byteArrayOf(),
             mac: suspend (ByteArray) -> ByteArray,
         ): CoseMac0Typed<P, CoseHeader> = mac0(
-            header = wrapCoseHeaders(protectedHeader, unprotectedHeader),
-            payload = payload,
-            payloadSerializer = payloadSerializer,
-            detached = detached,
-            externalAad = externalAad,
-            mac = mac,
+            wrapCoseHeaders(protectedHeader, unprotectedHeader),
+            payload, payloadSerializer, detached, externalAad, mac,
         )
     }
 }
@@ -144,29 +137,6 @@ data class CoseTyped<out C : COSE, out P, H : CoseHeaderBase>(
 /** The signature of a [CoseSign1], interpreted according to `alg` (or the `x5chain` leaf) of the effective header. */
 val CoseSign1Typed<*, *>.signature: CryptoSignature
     get() = COSE.getSignature(cose.plainSignature, header)
-
-/**
- * Serializes a [CoseTyped] through its wire object only, decoding the payload and header on the way back.
- *
- * Mirrors josef's `JwsTypedSerializerTemplate`.
- */
-class CoseTypedSerializerTemplate<C : CosePlaintextMessage, P, H : CoseHeaderBase>(
-    coseSerializer: KSerializer<C>,
-    payloadSerializer: KSerializer<P>,
-    headerSerializer: KSerializer<H>,
-    serialFormat: Cbor = coseCompliantSerializer,
-) : TransformingSerializerTemplate<CoseTyped<C, P, H>, C>(
-    parent = coseSerializer,
-    serialName = "CoseTyped",
-    encodeAs = { it.cose },
-    decodeAs = { cose ->
-        CoseTyped(
-            cose,
-            cose.getPayload(payloadSerializer, serialFormat).getOrThrow(),
-            cose.wrappedHeader(headerSerializer, serialFormat),
-        )
-    }
-)
 
 /**
  * Encodes [payload] the way the previous `CoseSigned.create` did: a [ByteArray] is used as-is, anything else is

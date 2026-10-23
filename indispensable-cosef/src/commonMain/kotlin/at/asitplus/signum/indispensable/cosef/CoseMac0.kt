@@ -20,6 +20,8 @@ import kotlinx.serialization.serializer
  * Representation of a COSE_MAC0 object
  * [RFC 9052 §6.2](https://www.rfc-editor.org/rfc/rfc9052.html#section-6.2).
  * Serialized untagged, as [CoseSign1].
+ *
+ * Create values through [CoseMacer]; decode payload and header through [typed].
  */
 @OptIn(ExperimentalSerializationApi::class)
 @ConsistentCopyVisibility
@@ -98,11 +100,8 @@ data class CoseMac0 internal constructor(
             coseCompliantSerializer.decodeFromByteArray<CoseMac0>(bytes)
         }.getOrThrow()
 
-        /**
-         * Builds a new [CoseMac0] with the buckets of [header], authenticating the `MAC_structure` built from the encoded [protectedHeader].
-         */
-        //TODO move to designated signer class/interface https://github.com/a-sit-plus/signum/pull/446
-        suspend operator fun invoke(
+        /** Builds a [CoseMac0] with the buckets of [header] from a raw MAC function. Public MACing: [CoseMacer]. */
+        internal suspend operator fun invoke(
             header: CoseHeaderWrapped<*>,
             plainPayload: ByteArray,
             detached: Boolean = false,
@@ -118,9 +117,8 @@ data class CoseMac0 internal constructor(
             )
         }
 
-        /** Builds a new [CoseMac0] from two [CoseHeader]s, one per bucket. */
-        //TODO move to designated signer class/interface https://github.com/a-sit-plus/signum/pull/446
-        suspend operator fun invoke(
+        /** Builds a [CoseMac0] from two [CoseHeader]s, one per bucket. Public MACing: [CoseMacer]. */
+        internal suspend operator fun invoke(
             protectedHeader: CoseHeader,
             unprotectedHeader: CoseHeader? = null,
             plainPayload: ByteArray,

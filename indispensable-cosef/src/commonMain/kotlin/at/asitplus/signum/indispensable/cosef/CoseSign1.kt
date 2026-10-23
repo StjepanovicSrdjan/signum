@@ -17,8 +17,8 @@ import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.serializer
 
 /**
- * COSE_Sign1
- * This type is the wire form. For a payload whose type is part of the contract, see [CoseSign1Typed].
+ * COSE_Sign1, the wire form
+ * Create signed values through [CoseSigner]; decode payload, header and signature through [typed].
  */
 @OptIn(ExperimentalSerializationApi::class)
 @ConsistentCopyVisibility
@@ -96,9 +96,8 @@ data class CoseSign1 internal constructor(
             coseCompliantSerializer.decodeFromByteArray<CoseSign1>(bytes)
         }.getOrThrow()
 
-        /** Builds a new [CoseSign1] with the buckets of [header], signing the `Sig_structure`. */
-        //TODO move to designated signer class/interface https://github.com/a-sit-plus/signum/pull/446
-        suspend operator fun invoke(
+        /** Builds a [CoseSign1] with the buckets of [header] from raw signature bytes. Public signing: [CoseSigner]. */
+        internal suspend operator fun invoke(
             header: CoseHeaderWrapped<*>,
             plainPayload: ByteArray,
             detached: Boolean = false,
@@ -114,9 +113,8 @@ data class CoseSign1 internal constructor(
             )
         }
 
-        /** Builds a new [CoseSign1] from two [CoseHeader]s, one per bucket. */
-        //TODO move to designated signer class/interface https://github.com/a-sit-plus/signum/pull/446
-        suspend operator fun invoke(
+        /** Builds a [CoseSign1] from two [CoseHeader]s, one per bucket. Public signing: [CoseSigner]. */
+        internal suspend operator fun invoke(
             protectedHeader: CoseHeader,
             unprotectedHeader: CoseHeader? = null,
             plainPayload: ByteArray,

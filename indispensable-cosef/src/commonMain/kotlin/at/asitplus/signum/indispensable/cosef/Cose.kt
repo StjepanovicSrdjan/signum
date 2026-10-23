@@ -129,15 +129,15 @@ sealed class CosePlaintextMessage : COSE() {
      * Decodes [plainPayload] with [serializer]
      * Accepts both a directly encoded payload and one wrapped in CBOR tag 24
      */
-    fun <P> getPayload(serializer: KSerializer<P>, serialFormat: Cbor = coseCompliantSerializer): KmmResult<P> =
+    fun <P> getPayload(serializer: KSerializer<P>, payloadFormat: Cbor = coseCompliantSerializer): KmmResult<P> =
         catching {
             val bytes = plainPayload ?: throw IllegalStateException("Payload is detached; supply it externally")
-            bytes.toTypedPayload(serializer, serialFormat)
+            bytes.toTypedPayload(serializer, payloadFormat)
         }
 
     /** Find the correct serializer at compile time. */
-    inline fun <reified P> getPayload(serialFormat: Cbor = coseCompliantSerializer): KmmResult<P> =
-        getPayload(serialFormat.serializersModule.serializer(), serialFormat)
+    inline fun <reified P> getPayload(payloadFormat: Cbor = coseCompliantSerializer): KmmResult<P> =
+        getPayload(payloadFormat.serializersModule.serializer(), payloadFormat)
 }
 
 /**
