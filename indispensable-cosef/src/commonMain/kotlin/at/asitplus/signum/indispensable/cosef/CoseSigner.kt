@@ -109,7 +109,9 @@ class CoseSigner(signers: Map<CoseAlgorithm.Signature, Signer>) {
             }
         }
         header.certificateChain?.firstOrNull()?.let { leaf ->
-            val certificate = requireNotNull(Certificate.decodeFromByteArray(leaf)) { "x5chain leaf is not a certificate" }
+            val certificate = requireNotNull(runCatching { Certificate.decodeFromByteArray(leaf) }.getOrNull()) {
+                "x5chain leaf is not a certificate"
+            }
             require(certificate.publicKey.equalsCryptographically(publicKey)) {
                 "Signer public key does not match the x5chain leaf certificate"
             }

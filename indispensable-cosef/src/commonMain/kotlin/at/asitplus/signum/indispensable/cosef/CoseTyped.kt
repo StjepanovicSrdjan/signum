@@ -6,10 +6,8 @@ import at.asitplus.signum.indispensable.contentHashCodeIfArray
 import at.asitplus.signum.indispensable.cosef.io.ByteStringWrapper
 import at.asitplus.signum.indispensable.cosef.io.ByteStringWrapperSerializer
 import at.asitplus.signum.indispensable.cosef.io.coseCompliantSerializer
-import at.asitplus.signum.indispensable.io.TransformingSerializerTemplate
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.cbor.CborElement
 
 typealias CoseSign1Typed<P, H> = CoseTyped<CoseSign1, P, H>

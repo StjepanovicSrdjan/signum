@@ -1,6 +1,14 @@
-package at.asitplus.signum.indispensable.cosef
+package at.asitplus.indispensable.cosef
 
+import at.asitplus.signum.indispensable.cosef.AppHeader
+import at.asitplus.signum.indispensable.cosef.CoseAlgorithm
+import at.asitplus.signum.indispensable.cosef.CoseHeader
+import at.asitplus.signum.indispensable.cosef.CoseHeaderWrapped
+import at.asitplus.signum.indispensable.cosef.CoseMac0
+import at.asitplus.signum.indispensable.cosef.CoseMacer
+import at.asitplus.signum.indispensable.cosef.encodePayload
 import at.asitplus.signum.indispensable.cosef.io.coseCompliantSerializer
+import at.asitplus.signum.indispensable.cosef.typed
 import at.asitplus.signum.indispensable.mac.HMAC
 import at.asitplus.signum.indispensable.mac.mac
 import at.asitplus.signum.supreme.Supreme
@@ -28,16 +36,23 @@ val CoseMacerTest by matrixSuite {
         typed.header shouldBe header
         typed.cose.tag shouldBe HMAC.SHA256.mac(key, typed.cose.macInput())
 
-        val parsed = CoseMac0(coseCompliantSerializer.encodeToByteArray(CoseMac0.serializer(), typed.cose))
+        val parsed = CoseMac0.Companion(
+            coseCompliantSerializer.encodeToByteArray(
+                CoseMac0.Companion.serializer(),
+                typed.cose
+            )
+        )
         parsed.typed<SignedClaims, CoseHeader>() shouldBe typed
     }
 
     "the header algorithm selects the registered key" {
         val otherKey = ByteArray(48) { (it + 100).toByte() }
-        val macer = CoseMacer(mapOf(
-            CoseAlgorithm.MAC.HS384 to otherKey,
-            CoseAlgorithm.MAC.HS256 to key,
-        ))
+        val macer = CoseMacer(
+            mapOf(
+                CoseAlgorithm.MAC.HS384 to otherKey,
+                CoseAlgorithm.MAC.HS256 to key,
+            )
+        )
 
         val hs256 = macer.mac0(CoseHeader(algorithm = CoseAlgorithm.MAC.HS256), claims)
         hs256.cose.tag shouldBe HMAC.SHA256.mac(key, hs256.cose.macInput())
@@ -67,7 +82,7 @@ val CoseMacerTest by matrixSuite {
     }
 
     "an already wrapped header keeps its bucket placement" {
-        val wrapped = CoseHeaderWrapped(
+        val wrapped = CoseHeaderWrapped.Companion(
             CoseHeader(algorithm = CoseAlgorithm.MAC.HS256, kid = "kid".encodeToByteArray()),
             unprotectedLabels = setOf(CborInteger(4)),
         )
@@ -85,7 +100,12 @@ val CoseMacerTest by matrixSuite {
         typed.cose.protectedHeader[CborInteger(-65537)] shouldBe CborString("x")
         typed.cose.tag shouldBe HMAC.SHA256.mac(key, typed.cose.macInput())
 
-        val parsed = CoseMac0(coseCompliantSerializer.encodeToByteArray(CoseMac0.serializer(), typed.cose))
+        val parsed = CoseMac0.Companion(
+            coseCompliantSerializer.encodeToByteArray(
+                CoseMac0.Companion.serializer(),
+                typed.cose
+            )
+        )
         parsed.typed<SignedClaims, AppHeader>() shouldBe typed
     }
 
@@ -97,7 +117,11 @@ val CoseMacerTest by matrixSuite {
 
         typed.cose.plainPayload.shouldBeNull()
         typed.payload shouldBe claims
-        val input = typed.cose.macInput(aad, detachedPayload = encodePayload(claims, SignedClaims.serializer()))
+        val input = typed.cose.macInput(aad, detachedPayload = encodePayload(
+            claims,
+            SignedClaims.serializer()
+        )
+        )
         typed.cose.tag shouldBe HMAC.SHA256.mac(key, input)
     }
 
